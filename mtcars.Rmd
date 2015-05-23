@@ -3,13 +3,11 @@ title: "Course project, Regression Models"
 output: pdf_document
 ---
 
-## explore the dataset
+# explore the mtcars dataset
 
-```{r}
-data(mtcars)
+First here are the brief explanations for all variables. 
 ```
-Here are the explanation for all variables
-```
+?mtcars
 mpg 	Miles/(US) gallon
 cyl 	Number of cylinders
 disp 	Displacement (cu.in.)
@@ -22,3 +20,59 @@ am 	  Transmission (0 = automatic, 1 = manual)
 gear 	Number of forward gears
 carb 	Number of carburetors 
 ```
+
+```{r}
+data(mtcars)
+# convert categorical variables into factor
+mtcars$am = factor(mtcars$am)
+mtcars$cyl = factor(mtcars$cyl)
+mtcars$vs = factor(mtcars$vs)
+# summary(mtcars)
+# variable selection
+summary(lm(mpg ~ . , data = mtcars))$coefficient
+fit <- lm(mpg ~ . , data = mtcars)
+# calculate the variance inflation factor (VIF)
+library(car)
+sqrt(vif(fit))
+```
+It seems that the weight is the best predictor for mpg. Therefore, I will include only weight and am as the covariates in my following analysis.
+
+# model fitting and selection
+```{r}
+# to select the best model, I'll fit 3 models and compare them
+fit1 = lm(mpg ~ am, data = mtcars)
+summary(fit1)$coefficient
+fit2 = lm(mpg ~ wt + am, data = mtcars)
+summary(fit2)$coefficient
+fit3 = lm(mpg ~ wt * am, data = mtcars)
+summary(fit3)$coefficient
+anova(fit1, fit2, fit3)
+```
+
+From model fit1, I found that manual transmission has positive effect on mpg comparing with automatic transmission. The coefficient 7.2 means the manual transmission has 7.2 mpg increase than automatic transmission on average.      
+From model fit3, I also found that the interaction between weight and transmission is significant. The intercept 31.4 is the average mpg of cars from the reference group am 0 (automatic transmission) at weight 0. -3.8 is the change of mpg for each 1000 pounds from the reference group am 0. 14.9 is the increase of mpg comparing am1 cars with am0 cars at weight 0. 
+
+```{r fig.width=6.5, fig.height=4}
+# to show that there is interaction, I plotted the regression within each am group
+library(ggplot2)
+theme_set(theme_bw())
+qplot(wt, mpg, data = mtcars, geom="point", colour = am) + geom_smooth(method="lm")
+```
+
+I can also observe the intersection of regressin line, suggesting the interaction between weight and transmission. The effect of weight on the mpg is dependant on the transmission type of cars. That is why the slopes of two regression lines are different.
+
+# residues and diagnostics
+```{r fig.width = 4, fig.height = 4}
+plot(predict(fit3), resid(fit3))
+```
+```{r fig.height = 5.5}
+par(mfrow = c(2, 2))
+plot(fit3)
+# round(dfbetas(fit3)[, 2], 3)
+round(hatvalues(fit3), 3)
+```
+There is no abnormal pattern found in the residues plot.
+
+# executive summary
+1. There is significant evidence suggesting that an manual transmission is better for MPG than an automatic transmission.
+2. The MPG difference between automatic and manual transmissions is 7.2 mpg disregarding the weight, while the difference is 14.9 mpg regarding the weight.
